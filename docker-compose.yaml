@@ -1,0 +1,52 @@
+services:
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+      target: FRONTEND
+    container_name: frontend_av
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+  server: 
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: BACKEND
+    container_name: backend_av
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - DB_USER=postgres
+      - DB_PASS=senai
+      - DB_HOST=database
+      - DB_NAME=db_quitanda
+      - DB_PORT=5432
+    depends_on:
+      database:
+        condition: service_healthy
+  database:
+    image: postgres:17-alpine
+    container_name: database_av
+    restart: 'always'
+    environment:
+    - POSTGRES_USER=postgres
+    - POSTGRES_DB=db_quitanda
+    - POSTGRES_PASSWORD=senai
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      - ./backend/db/bkt_quitanda.sql:/docker-entrypoint-initdb.d/bkt_quitanda.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d db_quitanda"]
+      interval: 5s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+volumes:
+  dbdata:
